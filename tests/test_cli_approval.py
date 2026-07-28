@@ -109,3 +109,21 @@ def test_pending_command_empty(_env: Path) -> None:
     result = runner.invoke(app, ["pending"])
     assert result.exit_code == 0
     assert "nenhum post pending" in result.stdout.lower()
+
+
+def test_approve_by_category_without_run_id(_env: Path) -> None:
+    """`approve --category X` libera sem precisar do run-id."""
+    repo = _seed(_env)
+    result = runner.invoke(app, ["approve", "--category", "profissional"])
+    assert result.exit_code == 0, result.stdout
+    assert "aprovados: 1" in result.stdout
+    assert repo.list_pending() == []
+    assert len(repo.list_by_status(PostStatus.APPROVED)) == 1
+
+
+def test_approve_all_without_any_filter(_env: Path) -> None:
+    """`approve` sem filtro libera tudo que está pending."""
+    repo = _seed(_env)
+    result = runner.invoke(app, ["approve"])
+    assert result.exit_code == 0, result.stdout
+    assert repo.list_pending() == []

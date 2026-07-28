@@ -80,7 +80,7 @@ class PostRepo:
         *,
         from_status: PostStatus,
         to_status: PostStatus,
-        run_id: str,
+        run_id: str | None,
         category: str | None,
         error: str | None,
     ) -> int:
@@ -93,9 +93,12 @@ class PostRepo:
             "idempotency_key IN ("
             " SELECT p.idempotency_key FROM posts p"
             " JOIN digests d ON d.id = p.digest_id"
-            " WHERE p.status=? AND d.run_id=?"
+            " WHERE p.status=?"
         )
-        params.extend([from_status.value, run_id])
+        params.append(from_status.value)
+        if run_id is not None:
+            where += " AND d.run_id=?"
+            params.append(run_id)
         if category is not None:
             where += " AND d.category=?"
             params.append(category)
@@ -105,7 +108,7 @@ class PostRepo:
             cur = conn.execute(f"UPDATE posts SET {set_clause} WHERE {where}", params)  # noqa: S608
             return cur.rowcount
 
-    def approve(self, *, run_id: str, category: str | None = None) -> int:
+    def approve(self, *, run_id: str | None = None, category: str | None = None) -> int:
         return self._transition(
             from_status=PostStatus.PENDING,
             to_status=PostStatus.APPROVED,
@@ -114,7 +117,7 @@ class PostRepo:
             error=None,
         )
 
-    def reject(self, *, run_id: str, category: str | None = None) -> int:
+    def reject(self, *, run_id: str | None = None, category: str | None = None) -> int:
         return self._transition(
             from_status=PostStatus.PENDING,
             to_status=PostStatus.SKIPPED,

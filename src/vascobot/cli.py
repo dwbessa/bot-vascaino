@@ -144,8 +144,8 @@ def pending() -> None:
         link = " 🔗" if p.has_link else ""
         typer.echo(f"  #{p.thread_index}{link}  {p.text}")
     typer.echo(f"\ntotal pending: {len(posts)}")
-    typer.echo("aprovar: vascobot approve --run-id <run>")
-    typer.echo("rejeitar: vascobot reject --run-id <run>")
+    typer.echo("aprovar tudo: vascobot approve   |   uma categoria: --category profissional")
+    typer.echo("rejeitar: vascobot reject [--category <cat>]")
 
 
 def _parse_key(idempotency_key: str) -> tuple[str, str]:
@@ -161,15 +161,21 @@ _KEY_MIN_PARTS = 2
 
 @app.command()
 def approve(
-    run_id: str = typer.Option(..., "--run-id", help="Run cujos posts pending serão liberados."),
-    category: str | None = typer.Option(None, "--category", help="Filtra por categoria."),
+    run_id: str | None = typer.Option(None, "--run-id", help="Filtra por run (opcional)."),
+    category: str | None = typer.Option(
+        None, "--category", help="Filtra por categoria (opcional)."
+    ),
 ) -> None:
-    """RF-10 — mostra os drafts pending e libera para publicação."""
+    """RF-10 — mostra os drafts pending e libera para publicação.
+
+    Sem filtro nenhum, libera TODOS os pending. Com --category (ou --run-id),
+    só os que casam. Ex.: `vascobot approve --category profissional`.
+    """
     settings = _load_settings()
     configure_logging(level=settings.log_level)
     repo = PostRepo(Database(settings.db_path))
 
-    pending = [p for p in repo.list_pending() if _matches(p, category)]
+    pending = [p for p in repo.list_pending() if _matches(p, category, run_id)]
     if not pending:
         typer.echo("nenhum post pending para esse filtro")
         return
@@ -181,8 +187,10 @@ def approve(
 
 @app.command()
 def reject(
-    run_id: str = typer.Option(..., "--run-id", help="Run cujos posts pending serão rejeitados."),
-    category: str | None = typer.Option(None, "--category", help="Filtra por categoria."),
+    run_id: str | None = typer.Option(None, "--run-id", help="Filtra por run (opcional)."),
+    category: str | None = typer.Option(
+        None, "--category", help="Filtra por categoria (opcional)."
+    ),
 ) -> None:
     """Rejeita drafts pending — marca como skipped, nunca publica."""
     settings = _load_settings()
@@ -220,11 +228,11 @@ def publish() -> None:
         typer.echo(json.dumps({"published": counts}))
 
 
-def _matches(post: object, category: str | None) -> bool:
-    if category is None:
-        return True
+def _matches(post: object, category: str | None, run_id: str | None = None) -> bool:
     key = getattr(post, "idempotency_key", "")
-    return f":{category}:" in key
+    if category is not None and f":{category}:" not in key:
+        return False
+    return not (run_id is not None and not key.startswith(f"{run_id}:"))
 
 
 @app.command()

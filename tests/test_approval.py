@@ -122,6 +122,28 @@ def test_approve_returns_zero_when_nothing_pending(db: Database) -> None:
     assert repo.approve(run_id="r1") == 0
 
 
+def test_approve_by_category_without_run_id(db: Database) -> None:
+    """Sem run_id, aprova todos os pending daquela categoria."""
+    repo = PostRepo(db)
+    repo.save_drafts([_draft("d-profissional", "profissional", 0)], require_approval=True)
+    repo.save_drafts([_draft("d-feminino", "feminino", 0)], require_approval=True)
+    n = repo.approve(category="profissional")
+    assert n == 1
+    pending = repo.list_pending()
+    assert len(pending) == 1
+    assert "feminino" in pending[0].idempotency_key
+
+
+def test_approve_all_without_filters(db: Database) -> None:
+    """Sem run_id nem categoria, aprova tudo que está pending."""
+    repo = PostRepo(db)
+    repo.save_drafts([_draft("d-profissional", "profissional", 0)], require_approval=True)
+    repo.save_drafts([_draft("d-feminino", "feminino", 0)], require_approval=True)
+    n = repo.approve()
+    assert n == 2
+    assert repo.list_pending() == []
+
+
 def test_list_pending_ordered_by_category_then_index(db: Database) -> None:
     repo = PostRepo(db)
     repo.save_drafts(

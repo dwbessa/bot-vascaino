@@ -64,15 +64,13 @@ pendentes:  ## Lista os posts pendentes de aprovação (read-only)
 	$(_load_env)
 	@set -a; . ./.env; set +a; uv run vascobot pending
 
-aprovar:  ## Libera os pending de um run: make aprovar RUN=<id> [CAT=profissional]
-	@test -n "$(RUN)" || { echo "uso: make aprovar RUN=<run-id> [CAT=<categoria>]"; exit 1; }
+aprovar:  ## Libera pending: make aprovar (tudo) | CAT=profissional | RUN=<id>
 	$(_load_env)
-	@set -a; . ./.env; set +a; uv run vascobot approve --run-id $(RUN) $(if $(CAT),--category $(CAT),)
+	@set -a; . ./.env; set +a; uv run vascobot approve $(if $(CAT),--category $(CAT),) $(if $(RUN),--run-id $(RUN),)
 
-rejeitar:  ## Rejeita os pending de um run: make rejeitar RUN=<id> [CAT=profissional]
-	@test -n "$(RUN)" || { echo "uso: make rejeitar RUN=<run-id> [CAT=<categoria>]"; exit 1; }
+rejeitar:  ## Rejeita pending: make rejeitar (tudo) | CAT=profissional | RUN=<id>
 	$(_load_env)
-	@set -a; . ./.env; set +a; uv run vascobot reject --run-id $(RUN) $(if $(CAT),--category $(CAT),)
+	@set -a; . ./.env; set +a; uv run vascobot reject $(if $(CAT),--category $(CAT),) $(if $(RUN),--run-id $(RUN),)
 
 publicar:  ## Publica os posts já aprovados nas plataformas ativas
 	$(_load_env)
