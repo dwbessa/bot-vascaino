@@ -71,4 +71,14 @@ def test_crontab_grid_matches_spec() -> None:
 
 def test_crontab_runs_as_nonroot_user() -> None:
     content = CRONTAB.read_text(encoding="utf-8")
-    assert "vascobot vascobot run" in content, "job deve rodar como usuário vascobot"
+    # formato /etc/cron.d: campo de usuário `vascobot` antes do comando
+    match = re.search(r"^0\s+[\d,]+\s+\*\s+\*\s+\*\s+vascobot\s+(.+)$", content, re.MULTILINE)
+    assert match, "linha de cron com usuário vascobot não encontrada"
+    command = match.group(1)
+    assert "vascobot run" in command, "job deve rodar `vascobot run`"
+
+
+def test_crontab_job_loads_runtime_env() -> None:
+    """O job precisa carregar o env exportado (cron não herda o do container)."""
+    content = CRONTAB.read_text(encoding="utf-8")
+    assert "/app/runtime_env.sh" in content

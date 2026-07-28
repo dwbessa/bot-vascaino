@@ -38,12 +38,12 @@ COPY --from=builder /app/migrations /app/migrations
 COPY crontab /etc/cron.d/vascobot
 COPY docker/entrypoint.sh /app/entrypoint.sh
 
+# /etc/cron.d/vascobot é lido direto pelo daemon (formato com campo de usuário).
+# Nada de `crontab -u` — os dois formatos são incompatíveis.
 RUN chmod 0644 /etc/cron.d/vascobot \
-    && crontab -u vascobot /etc/cron.d/vascobot \
     && chmod +x /app/entrypoint.sh \
     && mkdir -p /app/data \
-    && chown -R vascobot:vascobot /app
+    && chown -R vascobot:vascobot /app /app/data
 
-# cron precisa de root para rodar o daemon, mas o job roda como vascobot
-# (definido no crontab com o usuário no comando).
+# cron roda como root; cada job roda como vascobot (campo de usuário no cron.d).
 ENTRYPOINT ["/app/entrypoint.sh"]
