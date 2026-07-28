@@ -34,7 +34,7 @@ INCLUDE_INSTITUTIONAL=true
 
 BLUESKY_ENABLED=true
 BLUESKY_HANDLE=botvascaino.bsky.social
-BLUESKY_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
+BLUESKY_APP_PASSWORD=COLE_A_APP_PASSWORD    # 4 blocos de 4 chars separados por hífen
 
 X_ENABLED=false
 
