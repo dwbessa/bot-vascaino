@@ -32,18 +32,19 @@ ENV TZ=America/Sao_Paulo \
 RUN useradd --create-home --uid 10001 vascobot
 
 WORKDIR /app
-COPY --from=builder /app/.venv /app/.venv
-COPY --from=builder /app/src /app/src
-COPY --from=builder /app/migrations /app/migrations
+# `--chown` define o dono já na cópia — evita um `chown -R` sobre o .venv
+# (dezenas de milhares de arquivos), que no overlay duplica a camada e é lento.
+COPY --from=builder --chown=vascobot:vascobot /app/.venv /app/.venv
+COPY --from=builder --chown=vascobot:vascobot /app/src /app/src
+COPY --from=builder --chown=vascobot:vascobot /app/migrations /app/migrations
 COPY crontab /etc/cron.d/vascobot
-COPY docker/entrypoint.sh /app/entrypoint.sh
+COPY --chown=vascobot:vascobot docker/entrypoint.sh /app/entrypoint.sh
 
-# /etc/cron.d/vascobot é lido direto pelo daemon (formato com campo de usuário).
+# /etc/cron.d/vascobot fica root (formato com campo de usuário, lido pelo daemon).
 # Nada de `crontab -u` — os dois formatos são incompatíveis.
 RUN chmod 0644 /etc/cron.d/vascobot \
     && chmod +x /app/entrypoint.sh \
-    && mkdir -p /app/data \
-    && chown -R vascobot:vascobot /app /app/data
+    && install -d -o vascobot -g vascobot /app/data
 
 # cron roda como root; cada job roda como vascobot (campo de usuário no cron.d).
 ENTRYPOINT ["/app/entrypoint.sh"]
