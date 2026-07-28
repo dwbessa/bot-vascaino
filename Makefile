@@ -1,5 +1,6 @@
 .DEFAULT_GOAL := help
-.PHONY: help setup fmt lint types test cov accept check integration clean yt
+.PHONY: help setup fmt lint types test cov accept check integration clean yt \
+        criar criar-dry pendentes aprovar rejeitar publicar
 
 help:
 	@grep -E '^[a-z-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "};{printf "\033[36m%-13s\033[0m %s\n",$$1,$$2}'
@@ -43,6 +44,39 @@ check: lint types cov accept  ## ⬅️ Portão completo. Verde = pronto.
 
 integration:  ## Testes com rede real — manual, nunca no CI
 	uv run pytest -q -m integration
+
+# ---------------------------------------------------------------- operação
+# Todos carregam o .env antes de rodar. Fluxo: criar → pendentes → aprovar → publicar.
+
+define _load_env
+	@test -f .env || { echo "falta o .env (cp .env.example .env)"; exit 1; }
+endef
+
+criar:  ## Gera os drafts do digest (real, publica nada; ficam pending)
+	$(_load_env)
+	@set -a; . ./.env; set +a; uv run vascobot db migrate >/dev/null; uv run vascobot run
+
+criar-dry:  ## Igual ao criar, mas dry-run (não grava nada publicável)
+	$(_load_env)
+	@set -a; . ./.env; set +a; uv run vascobot run --dry-run
+
+pendentes:  ## Lista os posts pendentes de aprovação (read-only)
+	$(_load_env)
+	@set -a; . ./.env; set +a; uv run vascobot pending
+
+aprovar:  ## Libera os pending de um run: make aprovar RUN=<id> [CAT=profissional]
+	@test -n "$(RUN)" || { echo "uso: make aprovar RUN=<run-id> [CAT=<categoria>]"; exit 1; }
+	$(_load_env)
+	@set -a; . ./.env; set +a; uv run vascobot approve --run-id $(RUN) $(if $(CAT),--category $(CAT),)
+
+rejeitar:  ## Rejeita os pending de um run: make rejeitar RUN=<id> [CAT=profissional]
+	@test -n "$(RUN)" || { echo "uso: make rejeitar RUN=<run-id> [CAT=<categoria>]"; exit 1; }
+	$(_load_env)
+	@set -a; . ./.env; set +a; uv run vascobot reject --run-id $(RUN) $(if $(CAT),--category $(CAT),)
+
+publicar:  ## Publica os posts já aprovados nas plataformas ativas
+	$(_load_env)
+	@set -a; . ./.env; set +a; uv run vascobot publish
 
 clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache .coverage htmlcov
