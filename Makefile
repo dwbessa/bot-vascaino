@@ -35,8 +35,8 @@ cov:  ## Testes com cobertura e limiares
 	  echo "⏭  strict-100 skip: módulos ainda não existem (Fase 2/3)"; \
 	fi
 
-accept:  ## Só os critérios de aceite (CA-xx)
-	uv run pytest -q -m acceptance
+accept:  ## Só os critérios de aceite (CA-xx), nunca os que tocam rede
+	uv run pytest -q -m "acceptance and not integration"
 
 check: lint types cov accept  ## ⬅️ Portão completo. Verde = pronto.
 	@echo "✅ todos os portões passaram"
