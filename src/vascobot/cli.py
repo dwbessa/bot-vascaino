@@ -123,6 +123,43 @@ def db_migrate() -> None:
 
 
 @app.command()
+def pending() -> None:
+    """Lista os posts pendentes de aprovação (read-only, não muda nada)."""
+    settings = _load_settings()
+    configure_logging(level=settings.log_level)
+    repo = PostRepo(Database(settings.db_path))
+
+    posts = repo.list_pending()
+    if not posts:
+        typer.echo("nenhum post pending")
+        return
+
+    current_thread: tuple[str, str] | None = None
+    for p in posts:
+        run_id, category = _parse_key(p.idempotency_key)
+        thread_key = (category, p.platform)
+        if thread_key != current_thread:
+            typer.echo(f"\n▸ [{category} · {p.platform}] run={run_id}")
+            current_thread = thread_key
+        link = " 🔗" if p.has_link else ""
+        typer.echo(f"  #{p.thread_index}{link}  {p.text}")
+    typer.echo(f"\ntotal pending: {len(posts)}")
+    typer.echo("aprovar: vascobot approve --run-id <run>")
+    typer.echo("rejeitar: vascobot reject --run-id <run>")
+
+
+def _parse_key(idempotency_key: str) -> tuple[str, str]:
+    """`{run_id}:{categoria}:{plataforma}:{index}` → (run_id, categoria)."""
+    parts = idempotency_key.split(":")
+    if len(parts) >= _KEY_MIN_PARTS:
+        return parts[0], parts[1]
+    return idempotency_key, "?"
+
+
+_KEY_MIN_PARTS = 2
+
+
+@app.command()
 def approve(
     run_id: str = typer.Option(..., "--run-id", help="Run cujos posts pending serão liberados."),
     category: str | None = typer.Option(None, "--category", help="Filtra por categoria."),

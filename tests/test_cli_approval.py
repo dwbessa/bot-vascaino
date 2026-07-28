@@ -88,3 +88,24 @@ def test_reject_command(_env: Path) -> None:
     assert "rejeitados: 1" in result.stdout
     assert repo.list_pending() == []
     assert len(repo.list_by_status(PostStatus.SKIPPED)) == 1
+
+
+def test_pending_command_lists_without_mutating(_env: Path) -> None:
+    """`pending` é read-only — mostra os drafts mas não aprova nada."""
+    repo = _seed(_env)
+    result = runner.invoke(app, ["pending"])
+    assert result.exit_code == 0, result.stdout
+    assert "post de teste" in result.stdout
+    assert "profissional" in result.stdout
+    assert "r1" in result.stdout
+    # não mutou: continua pending
+    assert len(repo.list_pending()) == 1
+    assert repo.list_by_status(PostStatus.APPROVED) == []
+
+
+def test_pending_command_empty(_env: Path) -> None:
+    db = Database(_env)
+    db.migrate()
+    result = runner.invoke(app, ["pending"])
+    assert result.exit_code == 0
+    assert "nenhum post pending" in result.stdout.lower()
