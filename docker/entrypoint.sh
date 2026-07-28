@@ -13,6 +13,14 @@ chown vascobot:vascobot /app/runtime_env.sh
 echo "vascobot: aplicando migrations..."
 su -s /bin/sh -c '. /app/runtime_env.sh; vascobot db migrate' vascobot
 
+# Comando explícito (ex.: `docker compose run ... vascobot run --dry-run`) →
+# executa ele como o usuário vascobot, com o env carregado, e sai.
+# Sem comando (ex.: `docker compose up`) → agenda via cron em foreground.
+if [ "$#" -gt 0 ]; then
+    echo "vascobot: executando: $*"
+    exec su -s /bin/sh vascobot -c ". /app/runtime_env.sh; exec $*"
+fi
+
 echo "vascobot: iniciando cron em foreground (TZ=${TZ:-America/Sao_Paulo})..."
 # cron roda como root; cada job (definido em /etc/cron.d/vascobot) roda como
 # o usuário vascobot e carrega /app/runtime_env.sh antes de executar.
