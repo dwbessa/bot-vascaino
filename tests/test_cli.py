@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from vascobot.cli import app
+from vascobot.cli import _default_registry, app
 
 runner = CliRunner()
 
@@ -27,6 +27,24 @@ def test_cli_help() -> None:
     assert "run" in r.stdout
     assert "sources" in r.stdout
     assert "db" in r.stdout
+
+
+def test_default_registry_wires_client_into_adapters() -> None:
+    """Regressão: o `run` real coletava 0 porque os adapters vinham sem client.
+
+    Sem client injetado, `discover()` levanta RuntimeError e a coleta zera.
+    """
+    sentinel = object()
+    reg = _default_registry(sentinel)
+    for source_id in reg.ids():
+        adapter = reg.get(source_id)
+        assert adapter._client is sentinel, f"{source_id} não recebeu o client"
+
+
+def test_default_registry_without_client_is_listing_only() -> None:
+    reg = _default_registry()
+    for source_id in reg.ids():
+        assert reg.get(source_id)._client is None
 
 
 def test_db_migrate_creates_file(tmp_path: Path) -> None:

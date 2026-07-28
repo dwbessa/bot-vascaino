@@ -31,10 +31,12 @@ def _load_settings() -> Settings:
     return Settings()
 
 
-def _default_registry() -> SourceRegistry:
+def _default_registry(client: object | None = None) -> SourceRegistry:
+    """Registry das fontes. Com `client` (httpx.AsyncClient), os adapters coletam
+    de verdade; sem, servem só para listar (`sources check --offline`)."""
     reg = SourceRegistry()
-    reg.register(NetVascoAdapter())
-    reg.register(SuperVascoAdapter())
+    reg.register(NetVascoAdapter(client=client))  # type: ignore[arg-type]
+    reg.register(SuperVascoAdapter(client=client))  # type: ignore[arg-type]
     return reg
 
 
@@ -53,7 +55,9 @@ def run(
         typer.echo(f"offline smoke: sources={list(active)} dry_run={dry_run}")
         return
 
-    # Imports pesados (atproto, ollama) só quando for rodar de verdade.
+    # Imports pesados (atproto, ollama, httpx) só quando for rodar de verdade.
+    import httpx  # noqa: PLC0415
+
     from vascobot.llm.ollama_cloud import OllamaCloudProvider  # noqa: PLC0415
     from vascobot.pipeline.run import run_pipeline  # noqa: PLC0415
     from vascobot.publishers.bluesky import BlueskyPublisher  # noqa: PLC0415
@@ -61,28 +65,34 @@ def run(
 
     db = Database(settings.db_path)
     db.migrate()
-
-    source_reg = _default_registry()
-    pub_reg = PublisherRegistry()
-    if settings.bluesky_enabled:
-        pub_reg.register(BlueskyPublisher.from_settings(settings))
-    # X é plugado aqui quando habilitado — omitido no dry-run offline padrão.
-
-    provider = OllamaCloudProvider.from_settings(settings)
     now = datetime.now(tz=ZoneInfo(settings.tz))
 
-    stats = asyncio.run(
-        run_pipeline(
-            db=db,
-            settings=settings,
-            source_registry=source_reg,
-            publisher_registry=pub_reg,
-            llm_provider=provider,
-            now=now,
-            dry_run=dry_run,
-        ),
+    async def _drive() -> object:
+        async with httpx.AsyncClient(
+            headers={"User-Agent": settings.user_agent},
+            timeout=30.0,
+            follow_redirects=True,
+        ) as client:
+            source_reg = _default_registry(client)
+            pub_reg = PublisherRegistry()
+            if settings.bluesky_enabled:
+                pub_reg.register(BlueskyPublisher.from_settings(settings))
+            # X é plugado aqui quando habilitado.
+            provider = OllamaCloudProvider.from_settings(settings)
+            return await run_pipeline(
+                db=db,
+                settings=settings,
+                source_registry=source_reg,
+                publisher_registry=pub_reg,
+                llm_provider=provider,
+                now=now,
+                dry_run=dry_run,
+            )
+
+    stats = asyncio.run(_drive())
+    typer.echo(
+        json.dumps({"run_id": stats.run_id, "status": stats.status.value, **stats.counts}),  # type: ignore[attr-defined]
     )
-    typer.echo(json.dumps({"run_id": stats.run_id, "status": stats.status.value, **stats.counts}))
 
 
 @sources_app.command("check")
