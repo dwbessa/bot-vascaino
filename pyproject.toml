@@ -73,7 +73,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "S105", "S106", "ARG", "PLR2004"]
+"tests/**" = ["S101", "S105", "S106", "S311", "ARG", "PLR2004", "PLC0415"]
 "scripts/**" = ["T201"]  # scripts utilitários podem imprimir
 
 [tool.ruff.lint.isort]
@@ -90,7 +90,7 @@ show_error_codes = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["feedparser.*", "selectolax.*", "trafilatura.*", "atproto.*"]
+module = ["feedparser.*", "selectolax.*", "trafilatura.*", "atproto.*", "regex.*"]
 ignore_missing_imports = true
 
 # ---------------------------------------------------------------- pytest

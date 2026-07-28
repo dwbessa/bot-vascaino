@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help setup fmt lint types test cov accept check integration clean
+.PHONY: help setup fmt lint types test cov accept check integration clean yt
 
 help:
 	@grep -E '^[a-z-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "};{printf "\033[36m%-13s\033[0m %s\n",$$1,$$2}'
@@ -46,3 +46,14 @@ integration:  ## Testes com rede real — manual, nunca no CI
 
 clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache .coverage htmlcov
+
+yt:
+	@osascript -e 'tell application "Brave Browser"' \
+		-e 'repeat with w in windows' \
+		-e 'repeat with t in tabs of w' \
+		-e 'if URL of t contains "youtube.com" then' \
+		-e 'execute t javascript "var v = document.getElementsByTagName(\"video\")[0]; v.paused ? v.play() : v.pause();"' \
+		-e 'end if' \
+		-e 'end repeat' \
+		-e 'end repeat' \
+		-e 'end tell'
