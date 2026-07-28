@@ -1,0 +1,20 @@
+services:
+  vascobot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vascobot:latest
+    container_name: vascobot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      TZ: America/Sao_Paulo
+      DB_PATH: /app/data/vascobot.db
+      BLUESKY_SESSION_PATH: /app/data/bsky_session.txt
+    volumes:
+      - vascobot-data:/app/data
+    # Sem portas expostas — o bot só faz saída de rede (RF/plan §6.8).
+
+volumes:
+  vascobot-data:

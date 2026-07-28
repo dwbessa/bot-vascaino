@@ -47,4 +47,5 @@ def test_run_dry_run_prints_stats(tmp_path: Path) -> None:
     runner.invoke(app, ["db", "migrate"])
     r = runner.invoke(app, ["run", "--dry-run", "--offline"])
     assert r.exit_code == 0, r.stdout
-    assert "dry-run" in r.stdout.lower()
+    assert "offline smoke" in r.stdout.lower()
+    assert "dry_run=true" in r.stdout.lower()
