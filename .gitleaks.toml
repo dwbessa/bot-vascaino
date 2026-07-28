@@ -1,0 +1,52 @@
+title = "Vasco Digest Bot — regras próprias"
+
+[extend]
+useDefault = true
+
+# --- Regras específicas deste projeto ---------------------------------------
+
+[[rules]]
+id = "bluesky-app-password"
+description = "Bluesky App Password (xxxx-xxxx-xxxx-xxxx)"
+regex = '''(?i)(?:bluesky[_-]?app[_-]?password|BLUESKY_APP_PASSWORD)\s*[:=]\s*['"]?[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}['"]?'''
+tags = ["bluesky", "credential"]
+
+[[rules]]
+id = "ollama-api-key"
+description = "OLLAMA_API_KEY não vazio"
+regex = '''(?i)OLLAMA_API_KEY\s*[:=]\s*['"]?[A-Za-z0-9_\-]{16,}['"]?'''
+tags = ["ollama", "credential"]
+
+[[rules]]
+id = "x-client-secret"
+description = "X_CLIENT_SECRET não vazio"
+regex = '''(?i)X_CLIENT_SECRET\s*[:=]\s*['"]?[A-Za-z0-9_\-]{16,}['"]?'''
+tags = ["twitter", "credential"]
+
+[[rules]]
+id = "x-access-token"
+description = "X_ACCESS_TOKEN não vazio"
+regex = '''(?i)X_ACCESS_TOKEN\s*[:=]\s*['"]?[A-Za-z0-9_\-]{20,}['"]?'''
+tags = ["twitter", "credential"]
+
+[[rules]]
+id = "x-refresh-token"
+description = "X_REFRESH_TOKEN não vazio"
+regex = '''(?i)X_REFRESH_TOKEN\s*[:=]\s*['"]?[A-Za-z0-9_\-]{20,}['"]?'''
+tags = ["twitter", "credential"]
+
+# --- Allowlist ---------------------------------------------------------------
+
+[allowlist]
+description = "Ignorar exemplos e docs"
+paths = [
+  '''\.env\.example$''',
+  '''README\.md$''',
+  '''CLAUDE\.md$''',
+  '''specs/''',
+  '''\.gitleaks\.toml$''',
+]
+regexes = [
+  '''ci-fake''',
+  '''VascoDigestBot''',
+]

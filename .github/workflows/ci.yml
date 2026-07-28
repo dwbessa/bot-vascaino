@@ -1,0 +1,46 @@
+name: CI
+on:
+  push: { branches: [main] }
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }   # gitleaks precisa do histórico
+
+      - uses: astral-sh/setup-uv@v5
+        with: { enable-cache: true }
+
+      - run: uv python install 3.12
+      - run: uv sync --all-extras
+
+      # Mesmo portão do local — paridade é requisito (CLAUDE.md §5)
+      - name: make check
+        run: make check
+        env:
+          # Valores falsos: o CI não pode tocar rede real (CLAUDE.md §0.3)
+          OLLAMA_API_KEY: ci-fake
+          BLUESKY_HANDLE: ci.invalid
+          BLUESKY_APP_PASSWORD: ci-fake
+          X_ENABLED: "false"
+
+      - name: gitleaks (histórico completo)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  no-network-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv python install 3.12
+      - run: uv sync --all-extras
+      # pytest-socket derruba o build se algum teste abrir socket
+      - run: uv run pytest -m "not integration" --disable-socket --allow-unix-socket
