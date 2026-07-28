@@ -13,9 +13,45 @@ import pytest
 
 from vascobot.models import Platform, PostDraft, PostStatus
 from vascobot.publishers.base import PublishError
-from vascobot.publishers.bluesky import BlueskyPublisher
+from vascobot.publishers.bluesky import BlueskyPublisher, _url_spans
 
 BRT = ZoneInfo("America/Sao_Paulo")
+
+
+# ------------------------------------------------------------------ facets
+def test_url_spans_simple_ascii() -> None:
+    text = "veja: https://a.com/p aqui"
+    spans = _url_spans(text)
+    assert spans == [("https://a.com/p", 6, 6 + len("https://a.com/p"))]
+
+
+def test_url_spans_byte_offsets_with_emoji_and_accent() -> None:
+    """Offset é em BYTES UTF-8 — emoji e acento não podem bagunçar."""
+    prefix = "🔵⚫ São Januário: "
+    url = "https://netvasco.com.br/n/1/x"
+    text = f"{prefix}{url}"
+    spans = _url_spans(text)
+    assert len(spans) == 1
+    got_url, byte_start, byte_end = spans[0]
+    assert got_url == url
+    assert byte_start == len(prefix.encode("utf-8"))
+    assert byte_end == len(text.encode("utf-8"))
+
+
+def test_url_spans_multiple_urls() -> None:
+    text = "fontes: https://a.com/1 · https://b.com/2"
+    spans = _url_spans(text)
+    assert [s[0] for s in spans] == ["https://a.com/1", "https://b.com/2"]
+
+
+def test_url_spans_strips_trailing_ellipsis() -> None:
+    text = "fontes: https://a.com/muito-longo…"
+    spans = _url_spans(text)
+    assert spans[0][0] == "https://a.com/muito-longo"
+
+
+def test_url_spans_empty_when_no_url() -> None:
+    assert _url_spans("🔵⚫ PROFISSIONAL\nsem link aqui") == []
 
 
 @dataclass
@@ -37,11 +73,16 @@ class _FakeClient:
     def send_post(
         self, text: str, reply_to: Any | None = None, facets: Any | None = None
     ) -> dict[str, str]:
-        _ = facets
         idx = len(self.posts)
         if self.raise_on_post_index is not None and idx == self.raise_on_post_index:
             raise RuntimeError("boom")
-        rec = {"text": text, "reply_to": reply_to, "uri": f"at://did/{idx}", "cid": f"cid{idx}"}
+        rec = {
+            "text": text,
+            "reply_to": reply_to,
+            "facets": facets,
+            "uri": f"at://did/{idx}",
+            "cid": f"cid{idx}",
+        }
         self.posts.append(rec)
         return rec
 
@@ -146,6 +187,43 @@ def test_single_login_across_multiple_publish_calls(tmp_path: Path) -> None:
     asyncio.run(pub.publish_thread(_drafts(1)))
     asyncio.run(pub.publish_thread(_drafts(1)))
     assert len(client.login_calls) == 1
+
+
+def test_post_with_url_gets_facets(tmp_path: Path) -> None:
+    """Link vira clicável — facet enviado ao send_post quando há URL no texto."""
+    client = _FakeClient()
+    pub = _pub(tmp_path, client)
+    drafts = [
+        PostDraft(
+            digest_id="d",
+            platform=Platform.BLUESKY,
+            thread_index=0,
+            text="fontes: https://netvasco.com.br/n/1/x",
+            has_link=True,
+            idempotency_key="r:profissional:bluesky:0",
+        ),
+    ]
+    asyncio.run(pub.publish_thread(drafts))
+    facets = client.posts[0]["facets"]
+    assert facets is not None
+    assert len(facets) == 1
+
+
+def test_post_without_url_has_no_facets(tmp_path: Path) -> None:
+    client = _FakeClient()
+    pub = _pub(tmp_path, client)
+    drafts = [
+        PostDraft(
+            digest_id="d",
+            platform=Platform.BLUESKY,
+            thread_index=0,
+            text="🔵⚫ PROFISSIONAL\nVasco vence",
+            has_link=False,
+            idempotency_key="r:profissional:bluesky:0",
+        ),
+    ]
+    asyncio.run(pub.publish_thread(drafts))
+    assert client.posts[0]["facets"] is None
 
 
 def test_login_failure_raises_publish_error(tmp_path: Path) -> None:

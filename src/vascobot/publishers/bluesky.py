@@ -10,6 +10,7 @@ Detalhes decisivos (research.md §2):
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol
@@ -24,6 +25,43 @@ if TYPE_CHECKING:
     from vascobot.config import Settings
 
 _log = structlog.get_logger(__name__)
+
+_URL_RE = re.compile(r"https?://\S+")
+# Pontuação que costuma grudar no fim de uma URL no texto (inclui o "…" de truncagem).
+_URL_TRAILING = "….,;:)!?"
+
+
+def _url_spans(text: str) -> list[tuple[str, int, int]]:
+    """Acha URLs e devolve (url, byte_start, byte_end) em offsets UTF-8.
+
+    Facets do Bluesky são indexadas em bytes, não em caracteres — emoji e acento
+    ocupam mais de 1 byte, então `str.index` não serve (research.md §2).
+    """
+    spans: list[tuple[str, int, int]] = []
+    for match in _URL_RE.finditer(text):
+        url = match.group(0).rstrip(_URL_TRAILING)
+        if not url:
+            continue
+        byte_start = len(text[: match.start()].encode("utf-8"))
+        byte_end = byte_start + len(url.encode("utf-8"))
+        spans.append((url, byte_start, byte_end))
+    return spans
+
+
+def _build_facets(text: str) -> list[Any] | None:
+    """Constrói os facets de link do atproto para as URLs do texto. `None` se não houver."""
+    spans = _url_spans(text)
+    if not spans:
+        return None
+    from atproto import models  # noqa: PLC0415 — só quando publicar de verdade
+
+    return [
+        models.AppBskyRichtextFacet.Main(
+            features=[models.AppBskyRichtextFacet.Link(uri=url)],
+            index=models.AppBskyRichtextFacet.ByteSlice(byte_start=byte_start, byte_end=byte_end),
+        )
+        for url, byte_start, byte_end in spans
+    ]
 
 
 def _make_atproto_client() -> Any:  # wrapper — importa só quando construir de verdade
@@ -127,7 +165,11 @@ class BlueskyPublisher(Publisher):
             if root_ref is not None and parent_ref is not None:
                 reply_to = {"root": root_ref, "parent": parent_ref}
             try:
-                resp = self._client.send_post(text=draft.text, reply_to=reply_to)
+                resp = self._client.send_post(
+                    text=draft.text,
+                    reply_to=reply_to,
+                    facets=_build_facets(draft.text),
+                )
             except Exception as exc:
                 posted.append(_failed(draft, str(exc), self._now))
                 break
