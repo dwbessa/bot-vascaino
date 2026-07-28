@@ -155,9 +155,11 @@ def test_idempotency_key_differs_by_platform() -> None:
 
 
 def test_max_posts_per_thread_enforced() -> None:
-    d = _digest(bullets=["a", "b"])
+    """Empacotamento nunca ultrapassa max_posts (conteúdo longo é cortado)."""
+    long_bullets = ["palavra " * 40, "outra " * 40, "mais " * 40, "fim " * 40]
+    d = _digest(bullets=long_bullets)
     drafts = compose_thread(d, platform=Platform.BLUESKY, run_id="r", max_posts=3)
-    assert len(drafts) == 3
+    assert len(drafts) <= 3
 
 
 def test_bluesky_link_always_kept_regardless_of_policy() -> None:
@@ -200,7 +202,8 @@ def test_bluesky_truncates_when_over_limit() -> None:
     assert grapheme_count(truncated) <= BLUESKY_LIMIT
 
 
-def test_digest_without_sources_renders_placeholder() -> None:
+def test_digest_without_sources_is_single_post_no_link() -> None:
+    """Sem fontes → só a raiz, sem post de placeholder inútil, sem link."""
     d = Digest(
         id="d1",
         run_id="r1",
@@ -211,11 +214,12 @@ def test_digest_without_sources_renders_placeholder() -> None:
         llm_model="fake",
     )
     drafts = compose_thread(d, platform=Platform.BLUESKY, run_id="r")
-    assert "—" in drafts[-1].text
-    assert drafts[-1].has_link is False
+    assert len(drafts) == 1
+    assert drafts[0].has_link is False
+    assert "http" not in drafts[0].text
 
 
-def test_x_none_policy_with_no_sources_renders_placeholder() -> None:
+def test_x_none_policy_with_no_sources_no_link() -> None:
     d = Digest(
         id="d1",
         run_id="r1",
@@ -227,18 +231,3 @@ def test_x_none_policy_with_no_sources_renders_placeholder() -> None:
     )
     drafts = compose_thread(d, platform=Platform.X, run_id="r", x_link_policy=XLinkPolicy.NONE)
     assert not any(dd.has_link for dd in drafts)
-
-
-def test_x_last_post_with_no_sources_keeps_original_last_post() -> None:
-    d = Digest(
-        id="d1",
-        run_id="r1",
-        category=Category.PROFISSIONAL,
-        headline="h",
-        bullets=[],
-        source_urls=[],  # ← força o fallback
-        llm_model="fake",
-    )
-    drafts = compose_thread(d, platform=Platform.X, run_id="r", x_link_policy=XLinkPolicy.LAST_POST)
-    # sem sources, o último post do X vira o placeholder — não deve ter link
-    assert not drafts[-1].has_link

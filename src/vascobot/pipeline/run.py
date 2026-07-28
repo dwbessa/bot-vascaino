@@ -43,6 +43,10 @@ from vascobot.sources.registry import SourceRegistry
 
 _log = structlog.get_logger(__name__)
 
+# Quantos clusters (já priorizados) alimentam o resumo de cada categoria.
+# Poucos → bullets e fontes ficam sobre o mesmo assunto e a thread não incha.
+_SUMMARIZE_TOP_N = 5
+
 
 class _SettingsLike(Protocol):
     sources_enabled: tuple[str, ...]
@@ -202,11 +206,15 @@ async def _summarize_categories(
     digests: list[Digest] = []
     for category, cat_clusters in by_cat.items():
         ranked = rank_clusters(cat_clusters)
-        resumo = await summarizer.summarize(category, ranked)
+        # O sumarizador vê só os clusters de maior prioridade (RF-13). Isso mantém
+        # os bullets e as `source_urls` falando do mesmo material — sem isso, o
+        # LLM resume um assunto e as fontes exibidas eram de outro (jogo vs mercado).
+        material = ranked[:_SUMMARIZE_TOP_N]
+        resumo = await summarizer.summarize(category, material)
         if resumo is None:
             continue
-        source_bodies = [c.canonical.article.body or "" for c in ranked]
-        guard = check_summary(resumo, source_bodies=source_bodies, clusters=ranked)
+        source_bodies = [c.canonical.article.body or "" for c in material]
+        guard = check_summary(resumo, source_bodies=source_bodies, clusters=material)
         if not guard.passed:
             _log.warning("run.guardrail_rejected", category=category.value, reason=guard.reason)
             continue
@@ -217,7 +225,7 @@ async def _summarize_categories(
                 category=category,
                 headline=resumo.headline,
                 bullets=resumo.bullets,
-                source_urls=[c.canonical.article.url for c in ranked],
+                source_urls=[c.canonical.article.url for c in material],
                 llm_model=llm_model,
             ),
         )
