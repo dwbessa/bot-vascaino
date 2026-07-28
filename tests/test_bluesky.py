@@ -24,10 +24,13 @@ class _FakeClient:
     posts: list[dict[str, Any]] = field(default_factory=list)
     session_string: str = "SESSION_TOKEN"
     raise_on_login: Exception | None = None
+    raise_on_session_login: Exception | None = None
     raise_on_post_index: int | None = None
 
     def login(self, handle: str, password: str, session_string: str | None = None) -> None:
         self.login_calls.append((handle, password, session_string))
+        if session_string is not None and self.raise_on_session_login is not None:
+            raise self.raise_on_session_login
         if self.raise_on_login is not None:
             raise self.raise_on_login
 
@@ -90,6 +93,33 @@ def test_second_run_reuses_persisted_session(tmp_path: Path) -> None:
     asyncio.run(pub.publish_thread(_drafts(1)))
     # Passou session_string na chamada — respeitando limite de createSession
     assert client.login_calls[0][2] == "SESSION_TOKEN"
+
+
+def test_stale_session_falls_back_to_fresh_login(tmp_path: Path) -> None:
+    """Sessão obsoleta (troca de handle / expiração) → refaz login com senha."""
+    client = _FakeClient(
+        raise_on_session_login=RuntimeError("Profile not found"),
+    )
+    pub = _pub(tmp_path, client, session_seed="STALE_FROM_OLD_HANDLE")
+    posts = asyncio.run(pub.publish_thread(_drafts(1)))
+
+    assert all(p.status is PostStatus.PUBLISHED for p in posts)
+    # 1ª tentativa com session_string (falha), 2ª limpa (sucesso)
+    assert client.login_calls[0][2] == "STALE_FROM_OLD_HANDLE"
+    assert client.login_calls[1][2] is None
+    # sessão nova (válida) foi persistida por cima da obsoleta
+    assert (tmp_path / "bsky.txt").read_text().strip() == "SESSION_TOKEN"
+
+
+def test_fresh_login_failure_still_raises_publish_error(tmp_path: Path) -> None:
+    """Se até o login limpo falha (credencial ruim), erro claro."""
+    client = _FakeClient(
+        raise_on_session_login=RuntimeError("stale"),
+        raise_on_login=RuntimeError("bad password"),
+    )
+    pub = _pub(tmp_path, client, session_seed="STALE")
+    with pytest.raises(PublishError):
+        asyncio.run(pub.publish_thread(_drafts(1)))
 
 
 def test_publish_thread_uses_refs_root_and_parent(tmp_path: Path) -> None:

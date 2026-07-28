@@ -77,27 +77,43 @@ class BlueskyPublisher(Publisher):
     def _ensure_session(self) -> None:
         if self._logged_in:
             return
-        session_str: str | None = None
-        if self._session_path.exists():
+        session_str = self._read_session()
+
+        if session_str:
             try:
-                session_str = self._session_path.read_text(encoding="utf-8").strip() or None
-            except OSError:
-                session_str = None
-        try:
-            if session_str:
                 self._client.login(self._handle, self._password, session_string=session_str)
-            else:
-                self._client.login(self._handle, self._password)
+            except Exception as exc:
+                # A sessão salva não serve mais (ex.: você trocou o handle, ou ela
+                # expirou). Descarta e refaz o login limpo com a senha.
+                _log.warning("bluesky.session.stale", error=str(exc))
+                self._fresh_login()
+        else:
+            self._fresh_login()
+
+        self._persist_session()
+        self._logged_in = True
+
+    def _read_session(self) -> str | None:
+        if not self._session_path.exists():
+            return None
+        try:
+            return self._session_path.read_text(encoding="utf-8").strip() or None
+        except OSError:
+            return None
+
+    def _fresh_login(self) -> None:
+        try:
+            self._client.login(self._handle, self._password)
         except Exception as exc:
             raise PublishError(f"bluesky login failed: {exc}") from exc
 
+    def _persist_session(self) -> None:
         try:
             fresh = self._client.export_session_string()
             self._session_path.parent.mkdir(parents=True, exist_ok=True)
             self._session_path.write_text(fresh, encoding="utf-8")
         except (AttributeError, OSError) as exc:
             _log.warning("bluesky.session.persist_failed", error=str(exc))
-        self._logged_in = True
 
     async def publish_thread(self, drafts: list[PostDraft]) -> list[PublishedPost]:
         if not drafts:
