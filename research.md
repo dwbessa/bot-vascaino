@@ -179,6 +179,31 @@ código, desperdício aqui.
 O CSV rotulado de 100 manchetes (T-006) existe exatamente para transformar essa
 escolha em medição. Ver tarefa T-016b.
 
+#### Resultado do benchmark (T-016b, 2026-07-28)
+
+Rodado contra `labeled_headlines.csv` (103 manchetes, incluindo as armadilhas
+`Futsal Feminino Base:`, `Sub-16:`, `Sub-12:`, SAF/CEO/patrocínio, torcida
+organizada e histórico), batch de 20, `INCLUDE_INSTITUTIONAL=true`,
+`temperature=0`, structured output validado por schema.
+
+| Modelo | Acurácia geral | Precisão em `descartado` | Latência p50/batch |
+|---|---|---|---|
+| `gpt-oss:20b` | 100.0% | 100.0% | 16173 ms |
+| `qwen3.5:397b` | 100.0% | 100.0% | 56811 ms |
+| **`deepseek-v4-flash`** ✅ | **100.0%** | **100.0%** | **6835 ms** |
+
+**Decisão:** `CLASSIFY_MODEL=deepseek-v4-flash`. Empatou em qualidade com os
+outros dois e é 2,4× mais rápido que o `gpt-oss:20b` e 8,3× mais rápido que o
+`qwen3.5:397b`. Menor latência = menos risco de estourar `RNF-01` (< 3 min).
+
+**Sobre a acurácia 100%:** o CSV foi escrito à mão a partir de padrões reais
+dos portais. É a barra que o T-017 (CA-02) exige. Realimente com casos-limite
+observados no soft launch (T-033) — a resiliência real é ganha lá.
+
+**Sumarização (T-020):** benchmark de `SUMMARIZE_MODEL` fica pra Fase 3, quando
+já houver material real (Digest fixture). Candidatos: `qwen3.5:397b`,
+`glm-5.1`, `nemotron-3-super`.
+
 ### 4.5 ⚠️ Riscos operacionais
 
 - **Sem SLA.** Serviço publicado "as is", sem garantia de uptime. Há registro de

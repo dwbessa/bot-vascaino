@@ -1,0 +1,232 @@
+[
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "resultado do jogo"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "resultado do jogo"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "resultado do jogo"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "resultado do jogo"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "resultado do jogo"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "escalação do time"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "lesão de jogador"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "decisão da comissão técnica"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "suspensão de jogador"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "contratação de jogador"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "contratação de jogador"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "saída de jogador"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "oferta de jogador"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "renovação de contrato"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "rescisão de contrato"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "contratação de técnico"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "saída de auxiliar"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "treino do time"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "viagem para jogo"
+  },
+  {
+    "categoria": "descartado",
+    "confianca": 0.95,
+    "motivo": "esgotamento de ingressos"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "numeração dos uniformes"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "visita hospital"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "retorno de jogador"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "resultado de jogo"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "comentário sobre convocação"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "gols em jogo"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "análise jurídica"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "entrevista de CEO"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "aporte financeiro"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "eleição"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "pré-candidato"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "patrocínio"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "acordo de fornecimento"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "projeto de estádio"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "recorde de adesões"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "reestruturação"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "reunião com CBF"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "balanço"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "ação judicial"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "naming rights"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "especulação de ganhos na Sul-Americana"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "opinião de ex-jogador sobre desempenho de jogador do time"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.85,
+    "motivo": "lançamento de uniforme do time"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "desfalques da comissão por convocação"
+  },
+  {
+    "categoria": "profissional",
+    "confianca": 0.9,
+    "motivo": "confirmação de amistoso internacional"
+  },
+  {
+    "categoria": "descartado",
+    "confianca": 0.95,
+    "motivo": "protesto de torcida organizada"
+  }
+]

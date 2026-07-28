@@ -22,7 +22,15 @@ def _split_csv(value: object) -> object:
     return value
 
 
+def _blank_to_none(value: object) -> object:
+    if isinstance(value, str) and value.strip() == "":
+        return None
+    return value
+
+
 CsvTuple = Annotated[tuple[str, ...], NoDecode, BeforeValidator(_split_csv)]
+OptionalFloat = Annotated[float | None, BeforeValidator(_blank_to_none)]
+OptionalSecret = Annotated[SecretStr | None, BeforeValidator(_blank_to_none)]
 
 
 class Settings(BaseSettings):
@@ -43,7 +51,7 @@ class Settings(BaseSettings):
     # --- LLM ----------------------------------------------------------------
     ollama_host: str = "https://ollama.com"
     ollama_api_key: SecretStr
-    classify_model: str = "gpt-oss:20b-cloud"
+    classify_model: str = "deepseek-v4-flash"
     summarize_model: str = "qwen3.5:397b"
     classify_confidence_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
     classify_batch_size: int = Field(default=20, ge=1, le=100)
@@ -57,13 +65,13 @@ class Settings(BaseSettings):
 
     # --- X ------------------------------------------------------------------
     x_enabled: bool = True
-    x_client_id: SecretStr | None = None
-    x_client_secret: SecretStr | None = None
-    x_access_token: SecretStr | None = None
-    x_refresh_token: SecretStr | None = None
+    x_client_id: OptionalSecret = None
+    x_client_secret: OptionalSecret = None
+    x_access_token: OptionalSecret = None
+    x_refresh_token: OptionalSecret = None
     x_is_premium: bool = True
     x_link_policy: XLinkPolicy = XLinkPolicy.LAST_POST
-    x_monthly_budget_usd: float | None = None
+    x_monthly_budget_usd: OptionalFloat = None
 
     # --- Operação -----------------------------------------------------------
     require_approval: bool = True
