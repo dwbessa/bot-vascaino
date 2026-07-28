@@ -18,6 +18,9 @@ class PublisherRegistry:
         """Só as plataformas com `enabled=True`. Pipeline itera sobre isso."""
         return [p for p in self._by_platform.values() if p.enabled]
 
+    def get(self, platform: str) -> Publisher | None:
+        return self._by_platform.get(platform)
+
     def platforms(self) -> list[str]:
         return list(self._by_platform)
 

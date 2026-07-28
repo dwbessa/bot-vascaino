@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from vascobot.db import Database
-from vascobot.models import PostDraft, PostStatus
+from vascobot.models import PostDraft, PostStatus, PublishedPost
 
 
 @dataclass(frozen=True)
@@ -122,6 +122,22 @@ class PostRepo:
             category=category,
             error="rejeitado na aprovação",
         )
+
+    def record_result(self, post: PublishedPost) -> None:
+        """Persiste o resultado de uma publicação, casando por idempotency_key."""
+        with self._db.connect() as conn:
+            conn.execute(
+                "UPDATE posts SET status=?, external_id=?, cost_usd=?, published_at=?,"
+                " error=? WHERE idempotency_key=?",
+                (
+                    post.status.value,
+                    post.external_id,
+                    post.cost_usd,
+                    post.published_at.isoformat() if post.published_at else None,
+                    post.error,
+                    post.idempotency_key,
+                ),
+            )
 
 
 def _row_to_post(r: tuple[object, ...]) -> StoredPost:

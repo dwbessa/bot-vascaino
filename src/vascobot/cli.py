@@ -155,6 +155,34 @@ def reject(
     typer.echo(f"rejeitados: {n}")
 
 
+@app.command()
+def publish() -> None:
+    """Publica os posts já aprovados nas plataformas ativas (fecha run → approve → publish)."""
+    import httpx  # noqa: PLC0415
+
+    from vascobot.pipeline.publish import publish_approved  # noqa: PLC0415
+    from vascobot.publishers.bluesky import BlueskyPublisher  # noqa: PLC0415
+    from vascobot.publishers.registry import PublisherRegistry  # noqa: PLC0415
+
+    settings = _load_settings()
+    configure_logging(level=settings.log_level)
+    db = Database(settings.db_path)
+
+    async def _drive() -> dict[str, int]:
+        async with httpx.AsyncClient(timeout=30.0):
+            reg = PublisherRegistry()
+            if settings.bluesky_enabled:
+                reg.register(BlueskyPublisher.from_settings(settings))
+            # X entra aqui quando habilitado + orçamento verificado.
+            return await publish_approved(db, reg)
+
+    counts = asyncio.run(_drive())
+    if not counts:
+        typer.echo("nada aprovado para publicar")
+    else:
+        typer.echo(json.dumps({"published": counts}))
+
+
 def _matches(post: object, category: str | None) -> bool:
     if category is None:
         return True
