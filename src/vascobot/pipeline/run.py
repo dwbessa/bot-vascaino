@@ -18,7 +18,7 @@ import structlog
 
 from vascobot.config import XLinkPolicy
 from vascobot.db import Database
-from vascobot.llm.base import LLMProvider
+from vascobot.llm.base import LLMError, LLMProvider, LLMUnavailableError
 from vascobot.models import (
     Article,
     Category,
@@ -210,7 +210,14 @@ async def _summarize_categories(
         # os bullets e as `source_urls` falando do mesmo material — sem isso, o
         # LLM resume um assunto e as fontes exibidas eram de outro (jogo vs mercado).
         material = ranked[:_SUMMARIZE_TOP_N]
-        resumo = await summarizer.summarize(category, material)
+        try:
+            resumo = await summarizer.summarize(category, material)
+        except (LLMUnavailableError, LLMError) as exc:
+            # Falha de LLM numa categoria não pode derrubar a run inteira nem
+            # travá-la (o timeout do provider garante que "trava" vira erro).
+            # Pula a categoria; as outras seguem.
+            _log.warning("run.summarize_failed", category=category.value, error=str(exc))
+            continue
         if resumo is None:
             continue
         source_bodies = [c.canonical.article.body or "" for c in material]

@@ -29,6 +29,10 @@ if TYPE_CHECKING:
 
 T = TypeVar("T", bound=BaseModel)
 
+# Timeout por chamada ao Ollama Cloud. Modelo grande + cold start pode levar
+# ~1 min; damos folga, mas nunca "infinito".
+REQUEST_TIMEOUT_S = 120.0
+
 
 class _ChatClient(Protocol):
     async def chat(self, **kwargs: Any) -> Any: ...
@@ -51,6 +55,10 @@ class OllamaCloudProvider(LLMProvider):
         raw_client = AsyncClient(
             host=settings.ollama_host,
             headers={"Authorization": f"Bearer {settings.ollama_api_key.get_secret_value()}"},
+            # Timeout obrigatório: sem ele, uma conexão pendurada do Ollama Cloud
+            # trava a run inteira pra sempre (e num cron, empilha execuções).
+            # Estoura → retry com backoff → LLMUnavailableError → degrada.
+            timeout=REQUEST_TIMEOUT_S,
         )
         # `AsyncClient.chat` tem overloads que não batem com o Protocol simples;
         # o cast é seguro — só chamamos a assinatura kwargs-only.

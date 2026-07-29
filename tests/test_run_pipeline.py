@@ -188,6 +188,31 @@ def test_llm_outage_makes_run_partial(db: Database) -> None:
     assert pub.threads == []
 
 
+def test_summarize_llm_failure_skips_category_not_whole_run(db: Database) -> None:
+    """LLM falha na sumarização → pula a categoria, não trava nem crasha a run."""
+    now = datetime(2026, 7, 27, 6, 0, tzinfo=BRT)
+    articles = [_raw("1", "Vasco vence o Bahia por 2 a 1", minutes_ago=30, now=now)]
+    src_reg = SourceRegistry()
+    src_reg.register(_Source(articles))
+    pub_reg = PublisherRegistry()
+    pub_reg.register(_CapturingPublisher())
+
+    stats = asyncio.run(
+        run_pipeline(
+            db=db,
+            settings=_FakeSettings(),
+            source_registry=src_reg,
+            publisher_registry=pub_reg,
+            llm_provider=_SummarizeBroken(),
+            now=now,
+            dry_run=True,
+        ),
+    )
+    # run completa (não trava/crasha); a categoria sem resumo não vira digest
+    assert stats.status is RunStatus.OK
+    assert stats.counts["digests"] == 0
+
+
 # --------------------------------------------------------------------- helpers
 class _FakeSettings:
     """Config mínima que o run_pipeline consome (evita montar Settings real)."""
@@ -220,3 +245,20 @@ class _SmartFake(FakeLLMProvider):
         if schema is ResumoCategoria:
             return ResumoCategoria(headline="Resumo do dia", bullets=["um destaque"])
         raise AssertionError(f"schema inesperado: {schema}")
+
+
+class _SummarizeBroken(FakeLLMProvider):
+    """Classifica normal, mas a sumarização estoura (simula Ollama travado/erro)."""
+
+    async def structured(self, prompt: str, schema, model: str, temperature: float = 0.0):  # type: ignore[override,no-untyped-def]
+        if schema is ClassificacaoBatch:
+            n = len(re.findall(r'"title"', prompt))
+            return ClassificacaoBatch(
+                itens=[
+                    Classificacao(categoria=Categoria.PROFISSIONAL, confianca=0.9, motivo="x")
+                    for _ in range(n)
+                ],
+            )
+        from vascobot.llm.base import LLMUnavailableError
+
+        raise LLMUnavailableError("ollama timeout")
