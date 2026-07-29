@@ -18,8 +18,6 @@ from vascobot.llm.schemas import ResumoCategoria
 from vascobot.pipeline.dedupe import Cluster
 
 MIN_LITERAL_WORDS = 10
-HEADLINE_MAX = 80
-BULLET_MAX = 140
 
 _STOPWORDS_CAP: set[str] = {
     "vasco",
@@ -104,11 +102,11 @@ def check_summary(
     source_bodies: list[str],
     clusters: list[Cluster],
 ) -> GuardrailResult:
-    if len(summary.headline) > HEADLINE_MAX:
-        return GuardrailResult(False, f"headline acima do limite ({len(summary.headline)})")
+    # Sem checagem de comprimento aqui: o `compose` trunca para o limite de cada
+    # plataforma (CA-04). Rejeitar por tamanho aqui só descartava categorias
+    # inteiras por poucos caracteres. Guardamos as proteções de fato: cópia
+    # literal (RNF-07) e nome próprio não ancorado (anti-alucinação).
     for i, bullet in enumerate(summary.bullets):
-        if len(bullet) > BULLET_MAX:
-            return GuardrailResult(False, f"bullet #{i} acima do limite ({len(bullet)})")
         if not literal_overlap_ok(bullet, source_bodies):
             return GuardrailResult(
                 False, f"bullet #{i} copia trecho literal ≥ {MIN_LITERAL_WORDS} palavras"

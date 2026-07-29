@@ -39,9 +39,14 @@ def test_resumo_categoria_rejects_too_many_bullets() -> None:
         ResumoCategoria(headline="h", bullets=["a", "b", "c"])
 
 
-def test_resumo_categoria_headline_max_length() -> None:
-    with pytest.raises(ValueError):
-        ResumoCategoria(headline="x" * 81, bullets=[])
+def test_resumo_categoria_allows_long_headline() -> None:
+    """Sem limite de tamanho no schema — o compose trunca por plataforma.
+
+    Output de LLM poucos chars acima não pode estourar a validação e derrubar
+    a categoria.
+    """
+    r = ResumoCategoria(headline="x" * 120, bullets=[])
+    assert len(r.headline) == 120
 
 
 def test_fake_provider_returns_pre_seeded_response() -> None:

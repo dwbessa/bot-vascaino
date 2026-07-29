@@ -188,6 +188,53 @@ def test_llm_outage_makes_run_partial(db: Database) -> None:
     assert pub.threads == []
 
 
+class _NoApprovalSettings:
+    sources_enabled = ("fakesrc",)
+    max_lookback_hours = 8
+    classify_model = "fake"
+    summarize_model = "fake"
+    classify_batch_size = 20
+    classify_confidence_threshold = 0.7
+    include_institutional = True
+    require_approval = False  # ← publica inline
+    max_posts_per_thread = 4
+    x_is_premium = True
+    x_link_policy = XLinkPolicy.LAST_POST
+
+
+def test_each_category_is_a_separate_thread(db: Database) -> None:
+    """Feminino e profissional não podem sair na mesma thread (D4)."""
+    now = datetime(2026, 7, 27, 6, 0, tzinfo=BRT)
+    articles = [
+        _raw("1", "Feminino: Vasco vence o Vila Nova", minutes_ago=30, now=now),  # regra
+        _raw("2", "Vasco anuncia novo reforço para o meio-campo", minutes_ago=20, now=now),  # LLM
+    ]
+    src_reg = SourceRegistry()
+    src_reg.register(_Source(articles))
+    pub_reg = PublisherRegistry()
+    pub = _CapturingPublisher()
+    pub_reg.register(pub)
+
+    stats = asyncio.run(
+        run_pipeline(
+            db=db,
+            settings=_NoApprovalSettings(),
+            source_registry=src_reg,
+            publisher_registry=pub_reg,
+            llm_provider=_SmartFake(),
+            now=now,
+            dry_run=False,
+        ),
+    )
+    assert stats.counts["digests"] == 2
+    # duas threads separadas (uma por categoria), não uma só juntando tudo
+    assert len(pub.threads) == 2
+    # nenhuma thread mistura categorias: cada uma tem uma única categoria na key
+    for thread in pub.threads:
+        cats = {d.idempotency_key.split(":")[1] for d in thread}
+        assert len(cats) == 1
+
+
 def test_summarize_llm_failure_skips_category_not_whole_run(db: Database) -> None:
     """LLM falha na sumarização → pula a categoria, não trava nem crasha a run."""
     now = datetime(2026, 7, 27, 6, 0, tzinfo=BRT)

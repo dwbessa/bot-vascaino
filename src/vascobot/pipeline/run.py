@@ -251,28 +251,28 @@ async def _compose_and_route(
 ) -> dict[str, int]:
     repo = PostRepo(db)
     counts: dict[str, int] = {}
+    publish_now = not dry_run and not settings.require_approval and run_status is RunStatus.OK
     for publisher in publisher_registry.enabled():
         platform = Platform(publisher.platform)
-        all_drafts: list[PostDraft] = []
+        total = 0
+        # Uma thread POR digest (categoria). Nunca juntar categorias na mesma
+        # thread — cada uma é um post-raiz independente (D4).
         for digest in digests:
-            all_drafts.extend(
-                compose_thread(
-                    digest,
-                    platform=platform,
-                    run_id=run_id,
-                    x_is_premium=settings.x_is_premium,
-                    x_link_policy=settings.x_link_policy,
-                    max_posts=settings.max_posts_per_thread,
-                ),
+            drafts: list[PostDraft] = compose_thread(
+                digest,
+                platform=platform,
+                run_id=run_id,
+                x_is_premium=settings.x_is_premium,
+                x_link_policy=settings.x_link_policy,
+                max_posts=settings.max_posts_per_thread,
             )
-        counts[publisher.platform] = len(all_drafts)
-        if not all_drafts:
-            continue
-        repo.save_drafts(all_drafts, require_approval=settings.require_approval)
-
-        publish_now = not dry_run and not settings.require_approval and run_status is RunStatus.OK
-        if publish_now:
-            await publisher.publish_thread(all_drafts)
+            if not drafts:
+                continue
+            repo.save_drafts(drafts, require_approval=settings.require_approval)
+            total += len(drafts)
+            if publish_now:
+                await publisher.publish_thread(drafts)
+        counts[publisher.platform] = total
     return counts
 
 

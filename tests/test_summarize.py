@@ -111,11 +111,6 @@ def test_one_call_per_category() -> None:
     assert len(fake.calls) == 1
 
 
-def test_digest_headline_max_80_enforced() -> None:
-    with pytest.raises(ValueError):
-        ResumoCategoria(headline="x" * 81, bullets=[])
-
-
 def test_digest_bullets_max_2_enforced() -> None:
     with pytest.raises(ValueError):
         ResumoCategoria(headline="ok", bullets=["a", "b", "c"])

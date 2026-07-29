@@ -31,5 +31,14 @@ class ClassificacaoBatch(BaseModel):
 
 
 class ResumoCategoria(BaseModel):
-    headline: str = Field(max_length=80)
+    """Saída da sumarização.
+
+    Não impomos limite de caracteres no headline/bullets: um output de LLM
+    poucos chars acima não pode derrubar a categoria inteira (validação do
+    `structured()` estoura antes de conseguir truncar). O tamanho por
+    plataforma é garantido no `compose` (trunca graphemes/weighted). O `max_length`
+    aqui é só a **quantidade** de bullets (≤ 2), não o comprimento.
+    """
+
+    headline: str
     bullets: list[str] = Field(default_factory=list, max_length=2)

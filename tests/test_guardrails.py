@@ -90,25 +90,18 @@ def test_common_stopword_capitalized_ignored() -> None:
     assert proper_nouns_grounded("Vasco vence e o time comemora", [cluster]) is True
 
 
-# ------------------------------------------------------------ estouro
-def test_bullet_over_limit_rejected() -> None:
+# ------------------------------------------------------------ tamanho
+def test_long_content_is_not_rejected_by_guardrail() -> None:
+    """Tamanho não derruba mais o resumo — o compose trunca por plataforma (CA-04).
+
+    Um headline/bullet uns chars acima do estilo não pode custar a categoria.
+    """
     result = check_summary(
-        ResumoCategoria(headline="ok", bullets=["a" * 141]),
+        ResumoCategoria(headline="x" * 120, bullets=["a" * 200]),
         source_bodies=["corpo"],
         clusters=[_cluster_with_body("t", "corpo")],
     )
-    assert not result.passed
-    assert "limite" in result.reason.lower() or "141" in result.reason
-
-
-def test_headline_over_limit_rejected() -> None:
-    """Pydantic mata na entrada — mas o schema real permite 80. Testar boundary."""
-    result = check_summary(
-        ResumoCategoria(headline="x" * 80, bullets=[]),
-        source_bodies=["corpo"],
-        clusters=[_cluster_with_body("t", "corpo")],
-    )
-    assert result.passed  # 80 é o limite inclusivo
+    assert result.passed
 
 
 # ------------------------------------------------------------ integração
